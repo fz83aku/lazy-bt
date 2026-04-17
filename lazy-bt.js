@@ -1,22 +1,25 @@
-class KeyTriggerBehavior {
-  static id = "key-trigger-minimal";
+class RealUserTrigger {
+  static id = "real-user-trigger";
 
   async init(page, context) {
-    // 🧠 kurz warten bis Grund-JS geladen ist
     await page.waitForTimeout(4000);
 
-    // ⌨️ EINMALIGE Tasteneingabe (triggert Lazy Loading / hydration)
-    await page.keyboard.press("ArrowDown");
+    // 🖱 1. echten Fokus setzen (entscheidend!)
+    await page.mouse.move(300, 300);
+    await page.mouse.click(300, 300);
 
-    // 🧘 lange Idle-Phase, damit Bilder wirklich nachladen können
-    await page.waitForTimeout(8000);
+    await page.waitForTimeout(500);
 
-    // optional: noch ein kleiner "zweiter Trigger"
-    await page.keyboard.press("ArrowDown");
+    // ⌨️ 2. echte Tastatursequenz (nicht nur press)
+    await page.keyboard.down("ArrowDown");
+    await page.waitForTimeout(200);
+    await page.keyboard.up("ArrowDown");
 
-    // 🧘 finale Stabilisierung
-    await page.waitForTimeout(8000);
+    await page.waitForTimeout(2000);
+
+    // 🧘 3. Idle-Zeit für Lazy Loading / hydration
+    await page.waitForTimeout(10000);
   }
 }
 
-KeyTriggerBehavior;
+RealUserTrigger;
