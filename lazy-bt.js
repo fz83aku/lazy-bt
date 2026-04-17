@@ -1,30 +1,30 @@
-class BraveHumanScroll {
-  static id = "brave-human-scroll";
+class KeyboardScrollBehavior {
+  static id = "keyboard-scroll";
 
   async init(page, context) {
     await page.waitForTimeout(6000);
 
-    // 🖱 echte initiale Interaktion
-    await page.mouse.move(300, 300);
-    await page.mouse.click(300, 300);
-    await page.waitForTimeout(1500);
+    // 🧠 initiale Aktivierung (wichtig für Fokus + JS listeners)
+    try {
+      await page.mouse.move(300, 300);
+      await page.mouse.click(300, 300);
+    } catch (e) {}
 
     let stagnant = 0;
     let lastHeight = await page.evaluate(() => document.body.scrollHeight);
 
-    while (stagnant < 5) {
+    while (stagnant < 6) {
 
-      // 🐌 „menschliche Scroll-Session“
-      const steps = 12 + Math.floor(Math.random() * 8);
+      // ⌨️ Fokus sicherstellen
+      await page.keyboard.press("ArrowDown");
 
-      for (let i = 0; i < steps; i++) {
-        await page.mouse.wheel(0, 180 + Math.random() * 80);
-
-        // wichtig: kleine zufällige Pausen
-        await page.waitForTimeout(300 + Math.random() * 400);
+      // 🐌 langsames „lesen“-ähnliches Verhalten
+      for (let i = 0; i < 25; i++) {
+        await page.keyboard.press("ArrowDown");
+        await page.waitForTimeout(250 + Math.random() * 200);
       }
 
-      // 🧠 entscheidend: Idle Phase (trigger lazy loading)
+      // 🧠 Idle Phase für Lazy Images / hydration
       await page.waitForTimeout(4000);
 
       const newHeight = await page.evaluate(() => document.body.scrollHeight);
@@ -36,13 +36,13 @@ class BraveHumanScroll {
         lastHeight = newHeight;
       }
 
-      // 🧠 zusätzlicher „render breath“
+      // 🧘 zusätzlicher Render-Puffer
       await page.waitForTimeout(2000);
     }
 
-    // 🧭 final stabilisieren (wichtig für image swap completion)
+    // 🧭 final stabilisieren
     await page.waitForTimeout(8000);
   }
 }
 
-BraveHumanScroll;
+KeyboardScrollBehavior;
