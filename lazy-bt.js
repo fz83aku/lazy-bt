@@ -1,29 +1,27 @@
-class SlowLazyScroll {
-  constructor() {
-    this.name = "slow-lazy-scroll";
-  }
+module.exports = class SlowLazyScroll {
+  static id = "slow-lazy-scroll";
 
   async init(page, context) {
-    // kurze Start-Wartezeit
+    // kurze Startwartezeit für initiales Rendering
     await page.waitForTimeout(3000);
 
     let previousHeight = 0;
     let currentHeight = await page.evaluate(() => document.body.scrollHeight);
 
-    // solange scrollen, bis keine neue Höhe mehr entsteht
+    // Scrollen bis keine neue Content-Höhe mehr erscheint
     while (currentHeight !== previousHeight) {
       previousHeight = currentHeight;
 
       await page.evaluate(async () => {
         await new Promise((resolve) => {
-          let totalHeight = 0;
-          const distance = 300;
+          let total = 0;
+          const step = 300;
 
           const timer = setInterval(() => {
-            window.scrollBy(0, distance);
-            totalHeight += distance;
+            window.scrollBy(0, step);
+            total += step;
 
-            if (totalHeight >= document.body.scrollHeight) {
+            if (total >= document.body.scrollHeight) {
               clearInterval(timer);
               resolve();
             }
@@ -31,12 +29,14 @@ class SlowLazyScroll {
         });
       });
 
+      // Zeit für Lazy Loading
       await page.waitForTimeout(2000);
 
       currentHeight = await page.evaluate(() => document.body.scrollHeight);
     }
 
+    // final sicher ans Seitenende scrollen
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(2000);
   }
-}
+};
