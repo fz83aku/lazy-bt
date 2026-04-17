@@ -1,49 +1,48 @@
-class ShopWheelScroll {
-  static id = "shop-wheel-scroll";
+class BraveHumanScroll {
+  static id = "brave-human-scroll";
 
   async init(page, context) {
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(6000);
 
-    // 🖱 echte user-like activation
-    await page.mouse.move(400, 300);
-    await page.mouse.click(400, 300);
+    // 🖱 echte initiale Interaktion
+    await page.mouse.move(300, 300);
+    await page.mouse.click(300, 300);
+    await page.waitForTimeout(1500);
 
-    let stagnantRounds = 0;
+    let stagnant = 0;
+    let lastHeight = await page.evaluate(() => document.body.scrollHeight);
 
-    const getState = async () => {
-      return await page.evaluate(() => {
-        const imgs = Array.from(document.images);
-        const loaded = imgs.filter(img => img.complete && img.naturalWidth > 0).length;
-        return `${loaded}-${imgs.length}-${document.body.scrollHeight}`;
-      });
-    };
+    while (stagnant < 5) {
 
-    let lastState = await getState();
+      // 🐌 „menschliche Scroll-Session“
+      const steps = 12 + Math.floor(Math.random() * 8);
 
-    while (stagnantRounds < 6) {
+      for (let i = 0; i < steps; i++) {
+        await page.mouse.wheel(0, 180 + Math.random() * 80);
 
-      // 🐌 echtes Wheel Scrolling (entscheidend!)
-      for (let i = 0; i < 20; i++) {
-        await page.mouse.wheel(0, 250);
-        await page.waitForTimeout(600);
+        // wichtig: kleine zufällige Pausen
+        await page.waitForTimeout(300 + Math.random() * 400);
       }
 
-      // 🧠 WICHTIG: lange Stabilisierung (trigger lazy images)
-      await page.waitForTimeout(5000);
+      // 🧠 entscheidend: Idle Phase (trigger lazy loading)
+      await page.waitForTimeout(4000);
 
-      const newState = await getState();
+      const newHeight = await page.evaluate(() => document.body.scrollHeight);
 
-      if (newState === lastState) {
-        stagnantRounds++;
+      if (newHeight === lastHeight) {
+        stagnant++;
       } else {
-        stagnantRounds = 0;
-        lastState = newState;
+        stagnant = 0;
+        lastHeight = newHeight;
       }
+
+      // 🧠 zusätzlicher „render breath“
+      await page.waitForTimeout(2000);
     }
 
-    // 🧭 final stabilisieren (kein Scroll mehr)
+    // 🧭 final stabilisieren (wichtig für image swap completion)
     await page.waitForTimeout(8000);
   }
 }
 
-ShopWheelScroll;
+BraveHumanScroll;
