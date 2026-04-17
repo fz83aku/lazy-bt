@@ -2,39 +2,61 @@ class SlowLazyScroll {
   static id = "slow-lazy-scroll";
 
   async init(page, context) {
-    await page.waitForTimeout(4000); // initialer Render-Boost
+    // 🧠 Initial warten (wichtig für JS-heavy Shops)
+    await page.waitForTimeout(5000);
 
-    let previousHeight = 0;
-    let currentHeight = await page.evaluate(() => document.body.scrollHeight);
+    // 🖱 optionaler "aktivierender Klick"
+    try {
+      await page.mouse.click(200, 200);
+    } catch (e) {}
 
-    let safety = 0;
+    let previousHeight = await page.evaluate(() => document.body.scrollHeight);
+    let currentY = 0;
 
-    while (currentHeight !== previousHeight && safety < 40) {
-      safety++;
+    let sameHeightCount = 0;
 
-      previousHeight = currentHeight;
+    while (sameHeightCount < 3) {
+      let stepCount = 0;
 
-      // 🔽 kleiner Scroll statt großer Sprünge
-      await page.evaluate(() => {
-        window.scrollBy(0, 250);
-      });
+      // 🐌 extrem langsames pixelweises Scrollen
+      while (stepCount < 2000) {
+        await page.evaluate((y) => {
+          window.scrollTo(0, y);
+        }, currentY);
 
-      // ⏳ wichtig: gibt Images Zeit für IntersectionObserver
-      await page.waitForTimeout(2500);
+        currentY += 2; // 🔑 1–2px pro Schritt (sehr wichtig)
 
-      // 🔄 zusätzlicher "Render-Puffer"
-      await page.evaluate(() => new Promise(r => requestAnimationFrame(r)));
-      await page.waitForTimeout(1000);
+        // 🧠 Frame sync (verhindert "Jump Scroll")
+        await page.evaluate(() => new Promise(r => requestAnimationFrame(r)));
 
-      currentHeight = await page.evaluate(() => document.body.scrollHeight);
+        // 💤 bewusst langsamer Rhythmus
+        if (stepCount % 20 === 0) {
+          await page.waitForTimeout(80);
+        }
+
+        stepCount++;
+      }
+
+      // ⏳ warten auf Lazy Images / Network
+      await page.waitForTimeout(3000);
+
+      const newHeight = await page.evaluate(() => document.body.scrollHeight);
+
+      if (newHeight === previousHeight) {
+        sameHeightCount++;
+      } else {
+        sameHeightCount = 0;
+        previousHeight = newHeight;
+      }
     }
 
-    // 🧭 langsam bis ganz unten "setzen"
+    // 🧭 final langsam bis Ende
     await page.evaluate(async () => {
-      const step = 200;
-      for (let y = 0; y < document.body.scrollHeight; y += step) {
+      for (let y = 0; y < document.body.scrollHeight; y += 1) {
         window.scrollTo(0, y);
-        await new Promise(r => setTimeout(r, 400));
+        if (y % 50 === 0) {
+          await new Promise(r => setTimeout(r, 30));
+        }
       }
     });
 
