@@ -1,25 +1,24 @@
-function behavior(context) {
-  const { page } = context;
+module.exports = {
+  id: "simple-scroll-behavior",
 
-  console.log("Behavior started");
+  async behavior(context) {
+    const { page } = context;
 
-  return (async () => {
+    console.log("Behavior started");
 
-    // kurze Pause nach Seitenladen
     await page.waitForTimeout(3000);
 
-    // 🖱️ einfacher Klick (mittig auf die Seite)
+    // 🖱️ Klick
     await page.mouse.click(200, 200);
 
-    // kleine Pause nach Klick
     await page.waitForTimeout(2000);
 
     // 🐢 langsames Scrollen
     await page.evaluate(async () => {
       await new Promise((resolve) => {
         let totalHeight = 0;
-        const distance = 300; // kleine Schritte
-        const delay = 500;    // langsam!
+        const distance = 300;
+        const delay = 500;
 
         const timer = setInterval(() => {
           window.scrollBy(0, distance);
@@ -33,10 +32,8 @@ function behavior(context) {
       });
     });
 
-    // ⏳ am Ende warten (für Bilder)
     await page.waitForTimeout(5000);
 
-    console.log("Done scrolling");
-
-  })();
-}
+    console.log("Done");
+  }
+};
