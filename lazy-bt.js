@@ -1,63 +1,82 @@
-class ShopAwareScroll {
-  static id = "shop-aware-scroll";
+class ShopNetworkAwareScroll {
+  static id = "shop-network-aware-scroll";
 
   async init(page, context) {
-    // 🧠 Initial stabilisieren lassen
     await page.waitForTimeout(5000);
 
-    // 🖱 optional: user-like interaction (aktiviert lazy systems)
+    // 🖱 initial activation (triggers lazy systems)
     try {
-      await page.mouse.move(300, 300);
-      await page.mouse.click(300, 300);
+      await page.mouse.move(400, 300);
+      await page.mouse.click(400, 300);
     } catch (e) {}
 
-    let previousContentHash = "";
-    let stagnantRounds = 0;
-    let scrollY = 0;
+    // 📦 track network activity (images / assets)
+    let recentNetworkHits = 0;
 
-    const getContentHash = async () => {
+    page.on("response", (res) => {
+      try {
+        const url = res.url();
+        if (
+          url.includes(".jpg") ||
+          url.includes(".png") ||
+          url.includes(".webp") ||
+          url.includes("image") ||
+          url.includes("cdn")
+        ) {
+          recentNetworkHits++;
+          setTimeout(() => recentNetworkHits--, 5000);
+        }
+      } catch (e) {}
+    });
+
+    const getDomSignature = async () => {
       return await page.evaluate(() => {
-        // grober, aber effektiver DOM-Fingerprint
-        const items = document.querySelectorAll("img, picture, article, div");
-        return items.length + "-" + document.body.scrollHeight;
+        const imgs = document.querySelectorAll("img").length;
+        const cards = document.querySelectorAll("article, li, div").length;
+        return `${imgs}-${cards}-${document.body.scrollHeight}`;
       });
     };
 
-    previousContentHash = await getContentHash();
+    let lastSignature = await getDomSignature();
 
-    while (stagnantRounds < 4) {
-      // 🐌 langsames Scrollen in kleinen Schritten
-      for (let i = 0; i < 40; i++) {
-        scrollY += 150;
+    let stagnantRounds = 0;
+    let scrollY = 0;
+
+    while (stagnantRounds < 5) {
+      // 🐌 sehr langsames Scrollen
+      for (let i = 0; i < 25; i++) {
+        scrollY += 120;
 
         await page.evaluate((y) => {
           window.scrollTo(0, y);
         }, scrollY);
 
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(400);
       }
 
-      // ⏳ warten auf Lazy Load + Network + rendering
-      await page.waitForTimeout(3000);
+      // ⏳ warten auf lazy images + network
+      await page.waitForTimeout(4000);
 
-      // 🧠 prüfen ob neue Inhalte erschienen sind
-      const newHash = await getContentHash();
+      const newSignature = await getDomSignature();
 
-      if (newHash === previousContentHash) {
+      const networkActive = recentNetworkHits > 0;
+
+      // 🧠 Entscheidungslogik
+      if (newSignature === lastSignature && !networkActive) {
         stagnantRounds++;
       } else {
         stagnantRounds = 0;
-        previousContentHash = newHash;
+        lastSignature = newSignature;
       }
 
-      // 🧠 extra Frame-Stabilisierung
+      // 🧠 Frame sync (stabilisiert lazy observers)
       await page.evaluate(() => new Promise(r => requestAnimationFrame(r)));
     }
 
-    // 🧭 final langsam bis Ende scrollen
-    let height = await page.evaluate(() => document.body.scrollHeight);
+    // 🧭 finaler langsamer Sweep nach unten
+    const finalHeight = await page.evaluate(() => document.body.scrollHeight);
 
-    for (let y = 0; y < height; y += 100) {
+    for (let y = 0; y < finalHeight; y += 80) {
       await page.evaluate((pos) => {
         window.scrollTo(0, pos);
       }, y);
@@ -65,8 +84,8 @@ class ShopAwareScroll {
       await page.waitForTimeout(200);
     }
 
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(4000);
   }
 }
 
-ShopAwareScroll;
+ShopNetworkAwareScroll;
