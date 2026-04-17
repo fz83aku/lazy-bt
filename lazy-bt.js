@@ -1,67 +1,72 @@
-class SlowLazyScroll {
-  static id = "slow-lazy-scroll";
+class ShopAwareScroll {
+  static id = "shop-aware-scroll";
 
   async init(page, context) {
-    // 🧠 Initial warten (wichtig für JS-heavy Shops)
+    // 🧠 Initial stabilisieren lassen
     await page.waitForTimeout(5000);
 
-    // 🖱 optionaler "aktivierender Klick"
+    // 🖱 optional: user-like interaction (aktiviert lazy systems)
     try {
-      await page.mouse.click(200, 200);
+      await page.mouse.move(300, 300);
+      await page.mouse.click(300, 300);
     } catch (e) {}
 
-    let previousHeight = await page.evaluate(() => document.body.scrollHeight);
-    let currentY = 0;
+    let previousContentHash = "";
+    let stagnantRounds = 0;
+    let scrollY = 0;
 
-    let sameHeightCount = 0;
+    const getContentHash = async () => {
+      return await page.evaluate(() => {
+        // grober, aber effektiver DOM-Fingerprint
+        const items = document.querySelectorAll("img, picture, article, div");
+        return items.length + "-" + document.body.scrollHeight;
+      });
+    };
 
-    while (sameHeightCount < 3) {
-      let stepCount = 0;
+    previousContentHash = await getContentHash();
 
-      // 🐌 extrem langsames pixelweises Scrollen
-      while (stepCount < 2000) {
+    while (stagnantRounds < 4) {
+      // 🐌 langsames Scrollen in kleinen Schritten
+      for (let i = 0; i < 40; i++) {
+        scrollY += 150;
+
         await page.evaluate((y) => {
           window.scrollTo(0, y);
-        }, currentY);
+        }, scrollY);
 
-        currentY += 2; // 🔑 1–2px pro Schritt (sehr wichtig)
-
-        // 🧠 Frame sync (verhindert "Jump Scroll")
-        await page.evaluate(() => new Promise(r => requestAnimationFrame(r)));
-
-        // 💤 bewusst langsamer Rhythmus
-        if (stepCount % 20 === 0) {
-          await page.waitForTimeout(80);
-        }
-
-        stepCount++;
+        await page.waitForTimeout(300);
       }
 
-      // ⏳ warten auf Lazy Images / Network
+      // ⏳ warten auf Lazy Load + Network + rendering
       await page.waitForTimeout(3000);
 
-      const newHeight = await page.evaluate(() => document.body.scrollHeight);
+      // 🧠 prüfen ob neue Inhalte erschienen sind
+      const newHash = await getContentHash();
 
-      if (newHeight === previousHeight) {
-        sameHeightCount++;
+      if (newHash === previousContentHash) {
+        stagnantRounds++;
       } else {
-        sameHeightCount = 0;
-        previousHeight = newHeight;
+        stagnantRounds = 0;
+        previousContentHash = newHash;
       }
+
+      // 🧠 extra Frame-Stabilisierung
+      await page.evaluate(() => new Promise(r => requestAnimationFrame(r)));
     }
 
-    // 🧭 final langsam bis Ende
-    await page.evaluate(async () => {
-      for (let y = 0; y < document.body.scrollHeight; y += 1) {
-        window.scrollTo(0, y);
-        if (y % 50 === 0) {
-          await new Promise(r => setTimeout(r, 30));
-        }
-      }
-    });
+    // 🧭 final langsam bis Ende scrollen
+    let height = await page.evaluate(() => document.body.scrollHeight);
+
+    for (let y = 0; y < height; y += 100) {
+      await page.evaluate((pos) => {
+        window.scrollTo(0, pos);
+      }, y);
+
+      await page.waitForTimeout(200);
+    }
 
     await page.waitForTimeout(3000);
   }
 }
 
-SlowLazyScroll;
+ShopAwareScroll;
