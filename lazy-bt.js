@@ -1,39 +1,45 @@
-module.exports = {
-  id: "simple-scroll-behavior",
+export default class SlowLazyScroll {
+  constructor() {
+    this.name = "slow-lazy-scroll";
+  }
 
-  async behavior(context) {
-    const { page } = context;
-
-    console.log("Behavior started");
-
+  async init(page, context) {
+    // kurze Start-Wartezeit, damit erste Inhalte laden
     await page.waitForTimeout(3000);
 
-    // 🖱️ Klick
-    await page.mouse.click(200, 200);
+    let previousHeight = 0;
+    let currentHeight = await page.evaluate(() => document.body.scrollHeight);
 
-    await page.waitForTimeout(2000);
+    // solange scrollen, bis sich die Seitenhöhe nicht mehr verändert
+    while (currentHeight !== previousHeight) {
+      previousHeight = currentHeight;
 
-    // 🐢 langsames Scrollen
-    await page.evaluate(async () => {
-      await new Promise((resolve) => {
-        let totalHeight = 0;
-        const distance = 300;
-        const delay = 500;
+      // langsam nach unten scrollen in kleinen Schritten
+      await page.evaluate(async () => {
+        await new Promise((resolve) => {
+          let totalHeight = 0;
+          const distance = 300;
 
-        const timer = setInterval(() => {
-          window.scrollBy(0, distance);
-          totalHeight += distance;
+          const timer = setInterval(() => {
+            window.scrollBy(0, distance);
+            totalHeight += distance;
 
-          if (totalHeight >= document.body.scrollHeight) {
-            clearInterval(timer);
-            resolve();
-          }
-        }, delay);
+            if (totalHeight >= document.body.scrollHeight) {
+              clearInterval(timer);
+              resolve();
+            }
+          }, 500); // langsames Scroll-Intervall
+        });
       });
-    });
 
-    await page.waitForTimeout(5000);
+      // warten, damit Lazy Content nachladen kann
+      await page.waitForTimeout(2000);
 
-    console.log("Done");
+      currentHeight = await page.evaluate(() => document.body.scrollHeight);
+    }
+
+    // am Ende kurz ganz nach unten sichern
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(2000);
   }
-};
+}
