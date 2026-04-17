@@ -1,4 +1,4 @@
-module.exports = async function behavior(context) {
+async function behavior(context) {
   const { page } = context;
 
   await page.goto("https://example.com", {
@@ -55,4 +55,4 @@ module.exports = async function behavior(context) {
 
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(2000);
-};
+}
